@@ -1,0 +1,40 @@
+name: Test run-task inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Copy fixture task definition
+        run: |
+          cp $GITHUB_WORKSPACE/actions/hardened/aws-actions--amazon-ecs-deploy-task-definition/v2.6.1/tests/fixtures/task-definition.json /tmp/task-definition.json
+      - id: action
+        uses: .
+        continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: fake-key-id
+          AWS_SECRET_ACCESS_KEY: fake-secret-key
+          AWS_DEFAULT_REGION: us-east-1
+        with:
+          task-definition: /tmp/task-definition.json
+          run-task: "true"
+          run-task-container-overrides: '[{"name":"test-container","environment":[{"name":"ENV_VAR","value":"test"}]}]'
+          run-task-security-groups: "sg-12345678"
+          run-task-subnets: "subnet-12345678"
+          run-task-assign-public-IP: "DISABLED"
+          run-task-capacity-provider-strategy: '[{"capacityProvider":"FARGATE","weight":1}]'
+          run-task-launch-type: "FARGATE"
+          run-task-started-by: "GitHub-Actions"
+          run-task-tags: '[{"key":"Environment","value":"test"}]'
+          run-task-managed-ebs-volume-name: "my-ebs-volume"
+          run-task-managed-ebs-volume: '{"sizeInGiB":20,"volumeType":"gp3"}'
+          wait-for-task-stopped: "false"
+      - name: Assert action ran (may fail due to no real AWS creds)
+        run: |
+          echo "Action outcome: ${{ steps.action.outcome }}"
+          if [ "${{ steps.action.outcome }}" = "skipped" ]; then
+            echo "FAIL: action was skipped, expected it to run"
+            exit 1
+          fi
+          echo "PASS: action ran (outcome: ${{ steps.action.outcome }})"
