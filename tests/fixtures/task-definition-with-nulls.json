@@ -1,0 +1,28 @@
+{
+  "family": "test-task-nulls",
+  "containerDefinitions": [
+    {
+      "name": "test-container",
+      "image": "nginx:latest",
+      "cpu": 256,
+      "memory": 512,
+      "essential": true,
+      "environment": [],
+      "secrets": [],
+      "mountPoints": [],
+      "volumesFrom": [],
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp"
+        }
+      ]
+    }
+  ],
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "volumes": [],
+  "placementConstraints": []
+}
