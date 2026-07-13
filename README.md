@@ -8,6 +8,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 
 | Version | Tag | Upstream commit |
 |---------|-----|-----------------|
+| v1.5.0 | [`v1.5.0`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v1.5.0) | [`69e7aed`](https://github.com/aws-actions/amazon-ecs-deploy-task-definition/commit/69e7aed9b8acdd75a6c585ac669c33831ab1b9a3) |
 | v2.5.1 | [`v2.5.1`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.5.1) | — |
 | v2.6.0 | [`v2.6.0`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.0) | — |
 | v2.6.1 | [`v2.6.1`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.1) | — |
