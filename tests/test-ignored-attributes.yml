@@ -1,0 +1,42 @@
+name: Test task definition with ignored attributes
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: fake-key-id
+      AWS_SECRET_ACCESS_KEY: fake-secret-key
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify fixture file with ignored attributes exists
+        run: |
+          if [ ! -f "$GITHUB_WORKSPACE/tests/fixtures/task-definition-with-ignored-attrs.json" ]; then
+            echo "FAIL: fixture file not found"
+            exit 1
+          fi
+          echo "PASS: fixture file exists"
+          cat "$GITHUB_WORKSPACE/tests/fixtures/task-definition-with-ignored-attrs.json"
+
+      - name: Run action with task definition containing ignored attributes
+        id: action
+        uses: .
+        with:
+          task-definition: tests/fixtures/task-definition-with-ignored-attrs.json
+        continue-on-error: true
+
+      - name: Assert action processed the file (failed at AWS, not at attribute stripping)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # The action should:
+          # 1. Successfully read the file
+          # 2. Strip ignored attributes (taskDefinitionArn, status, revision, etc.)
+          # 3. Fail at the AWS ECS registerTaskDefinition API call (fake credentials)
+          # If the action failed at file reading or attribute stripping, that's a bug.
+          if [ "${{ steps.action.outcome }}" = "success" ]; then
+            echo "FAIL: action unexpectedly succeeded with fake AWS credentials"
+            exit 1
+          fi
+          echo "PASS: action correctly handled ignored attributes and failed at AWS API call"

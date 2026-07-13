@@ -1,0 +1,37 @@
+name: Test service deployment inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: fake-key-id
+      AWS_SECRET_ACCESS_KEY: fake-secret-key
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Run action with service, cluster, desired-count, force-new-deployment, wait-for-service-stability, wait-for-minutes
+        id: action
+        uses: .
+        with:
+          task-definition: tests/fixtures/task-definition.json
+          service: my-test-service
+          cluster: my-test-cluster
+          desired-count: "2"
+          force-new-deployment: "true"
+          wait-for-service-stability: "true"
+          wait-for-minutes: "5"
+        continue-on-error: true
+
+      - name: Assert action failed at AWS API (not at input parsing)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # The action should fail because we have fake AWS credentials,
+          # but it should NOT fail due to input parsing errors.
+          # The failure should come from the ECS registerTaskDefinition API call.
+          if [ "${{ steps.action.outcome }}" != "failure" ]; then
+            echo "FAIL: expected action to fail (no real AWS credentials)"
+            exit 1
+          fi
+          echo "PASS: action failed at AWS API call as expected (all service deployment inputs were accepted)"

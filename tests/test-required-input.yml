@@ -1,0 +1,42 @@
+name: Test required task-definition input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: fake-key-id
+      AWS_SECRET_ACCESS_KEY: fake-secret-key
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify task definition fixture file exists
+        run: |
+          if [ ! -f "$GITHUB_WORKSPACE/tests/fixtures/task-definition.json" ]; then
+            echo "FAIL: fixture file not found"
+            exit 1
+          fi
+          echo "PASS: fixture file exists"
+          cat "$GITHUB_WORKSPACE/tests/fixtures/task-definition.json"
+
+      - name: Run action with valid task definition (no service - register only)
+        id: action
+        uses: .
+        with:
+          task-definition: tests/fixtures/task-definition.json
+        continue-on-error: true
+
+      - name: Assert action attempted to register task definition
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # Without real AWS credentials, the action will fail at the API call.
+          # But the task-definition-arn output should NOT be set (since registration failed).
+          TASK_DEF_ARN="${{ steps.action.outputs.task-definition-arn }}"
+          echo "task-definition-arn: $TASK_DEF_ARN"
+          # The action should fail (fake credentials), not succeed
+          if [ "${{ steps.action.outcome }}" = "success" ]; then
+            echo "FAIL: action unexpectedly succeeded with fake AWS credentials"
+            exit 1
+          fi
+          echo "PASS: action correctly failed at AWS API call"

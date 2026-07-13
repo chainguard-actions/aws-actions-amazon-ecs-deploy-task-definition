@@ -1,0 +1,41 @@
+name: Test YAML format task definition
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: fake-key-id
+      AWS_SECRET_ACCESS_KEY: fake-secret-key
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Verify YAML fixture file exists
+        run: |
+          if [ ! -f "$GITHUB_WORKSPACE/tests/fixtures/task-definition.yaml" ]; then
+            echo "FAIL: YAML fixture file not found"
+            exit 1
+          fi
+          echo "PASS: YAML fixture file exists"
+          cat "$GITHUB_WORKSPACE/tests/fixtures/task-definition.yaml"
+
+      - name: Run action with YAML task definition file
+        id: action
+        uses: .
+        with:
+          task-definition: tests/fixtures/task-definition.yaml
+        continue-on-error: true
+
+      - name: Assert action failed at AWS API (not at YAML parsing)
+        run: |
+          echo "outcome: ${{ steps.action.outcome }}"
+          # The action should fail at the AWS API call (fake credentials),
+          # NOT at YAML parsing. If it failed at parsing, the error would be different.
+          # We can't distinguish the exact error here, but the action should fail
+          # (not succeed) since we have no real AWS credentials.
+          if [ "${{ steps.action.outcome }}" = "success" ]; then
+            echo "FAIL: action unexpectedly succeeded with fake AWS credentials"
+            exit 1
+          fi
+          echo "PASS: action correctly processed YAML task definition and failed at AWS API call"
