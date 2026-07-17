@@ -1,4 +1,4 @@
-name: Test keep-null-value-keys input handling
+name: Test task definition with ignored attributes
 on:
   workflow_dispatch:
 jobs:
@@ -7,48 +7,51 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create task definition with null/empty values
+      - name: Create task definition with attributes that should be ignored
         run: |
           mkdir -p /tmp/test-fixtures
-          cat > /tmp/test-fixtures/task-def-with-nulls.json << 'EOF'
+          cat > /tmp/test-fixtures/task-def-with-ignored-attrs.json << 'EOF'
           {
             "family": "test-task-family",
             "networkMode": "awsvpc",
             "requiresCompatibilities": ["FARGATE"],
             "cpu": "256",
             "memory": "512",
+            "taskDefinitionArn": "arn:aws:ecs:us-east-1:123456789012:task-definition/test:1",
+            "revision": 1,
+            "status": "ACTIVE",
+            "compatibilities": ["EC2", "FARGATE"],
+            "requiresAttributes": [{"name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"}],
+            "registeredAt": "2023-01-01T00:00:00.000Z",
+            "registeredBy": "arn:aws:iam::123456789012:user/test",
             "containerDefinitions": [
               {
                 "name": "test-container",
                 "image": "nginx:latest",
-                "essential": true,
-                "environment": [
-                  {"name": "MY_VAR", "value": ""}
-                ]
+                "essential": true
               }
             ]
           }
           EOF
 
-      - name: Run action with keep-null-value-keys set
+      - name: Run action with task definition containing ignored attributes
         id: action
         uses: .
         with:
-          task-definition: /tmp/test-fixtures/task-def-with-nulls.json
-          keep-null-value-keys: environment
+          task-definition: /tmp/test-fixtures/task-def-with-ignored-attrs.json
         env:
           AWS_DEFAULT_REGION: us-east-1
         continue-on-error: true
 
-      - name: Assert action failed at AWS API (not at file parsing)
+      - name: Assert action failed at AWS API (not at attribute stripping)
         env:
           OUTCOME: ${{ steps.action.outcome }}
         run: |
           echo "outcome: $OUTCOME"
           # The action should fail at the AWS API call (no credentials),
-          # meaning it successfully parsed the task definition with keep-null-value-keys.
+          # meaning it successfully stripped the ignored attributes and attempted registration.
           if [ "$OUTCOME" != "failure" ]; then
             echo "FAIL: expected action to fail (at AWS API), but got outcome=$OUTCOME"
             exit 1
           fi
-          echo "PASS: action correctly processed keep-null-value-keys and failed at AWS API stage"
+          echo "PASS: action correctly stripped ignored attributes and failed at AWS API stage"

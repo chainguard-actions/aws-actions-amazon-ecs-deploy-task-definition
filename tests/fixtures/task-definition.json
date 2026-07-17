@@ -1,11 +1,13 @@
 {
-  "family": "test-task",
+  "family": "test-task-family",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
   "containerDefinitions": [
     {
       "name": "test-container",
       "image": "nginx:latest",
-      "cpu": 256,
-      "memory": 512,
       "essential": true,
       "portMappings": [
         {
@@ -14,9 +16,5 @@
         }
       ]
     }
-  ],
-  "requiresCompatibilities": ["FARGATE"],
-  "networkMode": "awsvpc",
-  "cpu": "256",
-  "memory": "512"
+  ]
 }

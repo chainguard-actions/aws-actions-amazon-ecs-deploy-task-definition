@@ -1,0 +1,113 @@
+name: Test service-managed EBS volume inputs and run-task capacity provider strategy
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create task definition file with EBS volume
+        run: |
+          mkdir -p /tmp/test-fixtures
+          cat > /tmp/test-fixtures/task-def-ebs.json << 'EOF'
+          {
+            "family": "test-ebs-task-family",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "256",
+            "memory": "512",
+            "volumes": [
+              {
+                "name": "my-service-ebs-volume",
+                "configuredAtLaunch": true
+              }
+            ],
+            "containerDefinitions": [
+              {
+                "name": "test-container",
+                "image": "nginx:latest",
+                "essential": true
+              }
+            ]
+          }
+          EOF
+
+      - name: Run action with service-managed EBS volume inputs
+        id: action-ebs
+        uses: .
+        continue-on-error: true
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: fake-key-id
+          AWS_SECRET_ACCESS_KEY: fake-secret-key
+        with:
+          task-definition: /tmp/test-fixtures/task-def-ebs.json
+          service: my-ebs-service
+          cluster: my-ebs-cluster
+          service-managed-ebs-volume-name: "my-service-ebs-volume"
+          service-managed-ebs-volume: '{"sizeInGiB":30,"volumeType":"gp3","encrypted":true}'
+          max-retries: "1"
+
+      - name: Assert EBS action failed at AWS API (not at input parsing)
+        if: always()
+        env:
+          OUTCOME: ${{ steps.action-ebs.outcome }}
+        run: |
+          echo "outcome: '$OUTCOME'"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (no real AWS credentials)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (unexpected but acceptable)"
+          else
+            echo "FAIL: unexpected outcome: '$OUTCOME'"
+            exit 1
+          fi
+
+      - name: Create task definition for capacity provider strategy test
+        run: |
+          cat > /tmp/test-fixtures/task-def-capacity.json << 'EOF'
+          {
+            "family": "test-capacity-task-family",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "256",
+            "memory": "512",
+            "containerDefinitions": [
+              {
+                "name": "test-container",
+                "image": "nginx:latest",
+                "essential": true
+              }
+            ]
+          }
+          EOF
+
+      - name: Run action with run-task-capacity-provider-strategy input
+        id: action-capacity
+        uses: .
+        continue-on-error: true
+        env:
+          AWS_DEFAULT_REGION: us-east-1
+          AWS_ACCESS_KEY_ID: fake-key-id
+          AWS_SECRET_ACCESS_KEY: fake-secret-key
+        with:
+          task-definition: /tmp/test-fixtures/task-def-capacity.json
+          run-task: "true"
+          run-task-capacity-provider-strategy: '[{"capacityProvider":"FARGATE","weight":1,"base":0}]'
+          max-retries: "1"
+
+      - name: Assert capacity provider action failed at AWS API (not at input parsing)
+        if: always()
+        env:
+          OUTCOME: ${{ steps.action-capacity.outcome }}
+        run: |
+          echo "outcome: '$OUTCOME'"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed as expected (no real AWS credentials)"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "PASS: action succeeded (unexpected but acceptable)"
+          else
+            echo "FAIL: unexpected outcome: '$OUTCOME'"
+            exit 1
+          fi

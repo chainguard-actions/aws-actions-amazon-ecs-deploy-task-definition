@@ -1,0 +1,31 @@
+name: Test invalid task definition file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create an invalid task definition file
+        run: |
+          mkdir -p /tmp/test-fixtures
+          echo "this is not valid json or yaml {{{" > /tmp/test-fixtures/invalid-task-def.json
+
+      - name: Run action with invalid task definition file
+        id: action
+        uses: .
+        with:
+          task-definition: /tmp/test-fixtures/invalid-task-def.json
+        continue-on-error: true
+
+      - name: Assert action failed due to invalid task definition
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" != "failure" ]; then
+            echo "FAIL: expected action to fail when task definition file is invalid, but got outcome=$OUTCOME"
+            exit 1
+          fi
+          echo "PASS: action correctly failed when task definition file was invalid"
