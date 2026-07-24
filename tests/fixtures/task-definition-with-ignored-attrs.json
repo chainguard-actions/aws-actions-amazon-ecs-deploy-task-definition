@@ -1,12 +1,14 @@
 {
-  "family": "test-task",
+  "family": "test-task-ignored-attrs",
   "taskDefinitionArn": "arn:aws:ecs:us-east-1:123456789012:task-definition/test-task:1",
   "revision": 1,
   "status": "ACTIVE",
-  "requiresAttributes": [
-    {"name": "com.amazonaws.ecs.capability.fargate"}
-  ],
   "compatibilities": ["EC2", "FARGATE"],
+  "requiresAttributes": [
+    {
+      "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+    }
+  ],
   "registeredAt": "2023-01-01T00:00:00.000Z",
   "registeredBy": "arn:aws:iam::123456789012:user/test",
   "containerDefinitions": [

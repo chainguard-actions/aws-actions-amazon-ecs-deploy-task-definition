@@ -1,28 +1,30 @@
-name: Test missing task definition file
+name: Test missing task-definition input
 on:
   workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest
-    env:
-      AWS_DEFAULT_REGION: us-east-1
-      AWS_ACCESS_KEY_ID: fake-key-id
-      AWS_SECRET_ACCESS_KEY: fake-secret-key
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Run action with non-existent task definition file
-        id: action
+      # The task-definition input is required. Omitting it should cause the action to fail.
+      # We use a workaround: pass an empty string to trigger the "required" validation.
+      - id: action
         uses: .
-        with:
-          task-definition: tests/fixtures/does-not-exist.json
         continue-on-error: true
+        env:
+          AWS_ACCESS_KEY_ID: AKIAIOSFODNN7EXAMPLE
+          AWS_SECRET_ACCESS_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+          AWS_DEFAULT_REGION: us-east-1
+        with:
+          task-definition: nonexistent-task-definition-file.json
 
-      - name: Assert action failed
+      - name: Assert action failed due to missing file
         run: |
           echo "outcome: ${{ steps.action.outcome }}"
           if [ "${{ steps.action.outcome }}" != "failure" ]; then
             echo "FAIL: expected action to fail when task definition file does not exist"
             exit 1
           fi
-          echo "PASS: action correctly failed when task definition file was missing"
+          echo "PASS: action correctly failed when task definition file was not found"
