@@ -1,4 +1,4 @@
-name: Test ECS deploy - run standalone task
+name: Test ECS deploy - run-task extended inputs
 on:
   workflow_dispatch:
 jobs:
@@ -7,19 +7,32 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create task definition file for standalone run
+      - name: Create task definition file for extended run-task
         run: |
-          cat > /tmp/run-task-def.json << 'EOF'
+          cat > /tmp/run-task-ext-def.json << 'EOF'
           {
-            "family": "test-run-task",
+            "family": "test-run-task-ext",
             "containerDefinitions": [
               {
-                "name": "runner",
+                "name": "worker",
                 "image": "busybox:latest",
                 "cpu": 256,
                 "memory": 512,
                 "essential": true,
-                "command": ["echo", "hello from standalone task"]
+                "command": ["echo", "hello"],
+                "mountPoints": [
+                  {
+                    "sourceVolume": "task-ebs-volume",
+                    "containerPath": "/data",
+                    "readOnly": false
+                  }
+                ]
+              }
+            ],
+            "volumes": [
+              {
+                "name": "task-ebs-volume",
+                "configuredAtLaunch": true
               }
             ],
             "requiresCompatibilities": ["FARGATE"],
@@ -33,17 +46,23 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          task-definition: /tmp/run-task-def.json
+          task-definition: /tmp/run-task-ext-def.json
           run-task: "true"
-          run-task-launch-type: FARGATE
-          run-task-started-by: GitHub-Actions-Test
+          run-task-container-overrides: '[{"name":"worker","command":["echo","overridden"]}]'
+          run-task-security-groups: sg-12345678
+          run-task-subnets: subnet-12345678
+          run-task-assign-public-IP: DISABLED
+          run-task-capacity-provider-strategy: '[{"capacityProvider":"FARGATE_SPOT","weight":1}]'
+          run-task-tags: '[{"key":"Environment","value":"test"},{"key":"Owner","value":"github-actions"}]'
+          run-task-managed-ebs-volume-name: task-ebs-volume
+          run-task-managed-ebs-volume: '{"sizeInGiB":10,"volumeType":"gp3"}'
           wait-for-task-stopped: "false"
         env:
           AWS_DEFAULT_REGION: us-east-1
           AWS_ACCESS_KEY_ID: fake-key-id
           AWS_SECRET_ACCESS_KEY: fake-secret-key
 
-      - name: Assert action ran (run-task scenario, expect graceful failure without real AWS creds)
+      - name: Assert action ran (run-task extended inputs, expect graceful failure without real AWS creds)
         env:
           OUTCOME: ${{ steps.action.outcome }}
           TASK_DEF_ARN: ${{ steps.action.outputs.task-definition-arn }}
@@ -57,7 +76,7 @@ jobs:
               echo "FAIL: action succeeded but task-definition-arn output is empty"
               exit 1
             fi
-            echo "PASS: standalone task ran, task-def-ARN=$TASK_DEF_ARN, run-task-ARN=$RUN_TASK_ARN"
+            echo "PASS: extended run-task completed, task-def-ARN=$TASK_DEF_ARN, run-task-ARN=$RUN_TASK_ARN"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (no real AWS credentials available)"
           else

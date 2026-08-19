@@ -1,4 +1,4 @@
-name: Test ECS deploy - register task definition only (no service)
+name: Test ECS deploy - service deployment options
 on:
   workflow_dispatch:
 jobs:
@@ -9,12 +9,12 @@ jobs:
 
       - name: Create task definition file
         run: |
-          cat > /tmp/task-def.json << 'EOF'
+          cat > /tmp/service-opts-task-def.json << 'EOF'
           {
-            "family": "test-task",
+            "family": "test-service-opts-task",
             "containerDefinitions": [
               {
-                "name": "test-container",
+                "name": "web",
                 "image": "nginx:latest",
                 "cpu": 256,
                 "memory": 512,
@@ -30,7 +30,13 @@ jobs:
             "requiresCompatibilities": ["FARGATE"],
             "networkMode": "awsvpc",
             "cpu": "256",
-            "memory": "512"
+            "memory": "512",
+            "tags": [
+              {
+                "key": "Environment",
+                "value": "test"
+              }
+            ]
           }
           EOF
 
@@ -38,13 +44,21 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          task-definition: /tmp/task-def.json
+          task-definition: /tmp/service-opts-task-def.json
+          service: my-ecs-service
+          cluster: my-cluster
+          desired-count: "2"
+          force-new-deployment: "true"
+          wait-for-service-stability: "true"
+          wait-for-minutes: "5"
+          enable-ecs-managed-tags: "true"
+          propagate-tags: SERVICE
         env:
           AWS_DEFAULT_REGION: us-east-1
           AWS_ACCESS_KEY_ID: fake-key-id
           AWS_SECRET_ACCESS_KEY: fake-secret-key
 
-      - name: Assert action ran (register-only, expect graceful failure without real AWS creds)
+      - name: Assert action ran (service deployment options, expect graceful failure without real AWS creds)
         env:
           OUTCOME: ${{ steps.action.outcome }}
           TASK_DEF_ARN: ${{ steps.action.outputs.task-definition-arn }}
@@ -56,7 +70,7 @@ jobs:
               echo "FAIL: action succeeded but task-definition-arn output is empty"
               exit 1
             fi
-            echo "PASS: task definition registered, ARN=$TASK_DEF_ARN"
+            echo "PASS: service deployed with options, ARN=$TASK_DEF_ARN"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (no real AWS credentials available)"
           else
