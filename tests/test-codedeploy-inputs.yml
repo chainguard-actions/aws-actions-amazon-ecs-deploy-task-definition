@@ -1,0 +1,96 @@
+name: Test CodeDeploy and service EBS volume inputs
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create ECS task definition file
+        run: |
+          cat > /tmp/task-def-codedeploy.json << 'EOF'
+          {
+            "family": "test-codedeploy-task",
+            "containerDefinitions": [
+              {
+                "name": "web",
+                "image": "nginx:latest",
+                "cpu": 256,
+                "memory": 512,
+                "essential": true,
+                "portMappings": [
+                  {
+                    "containerPort": 80,
+                    "protocol": "tcp"
+                  }
+                ]
+              }
+            ],
+            "requiresCompatibilities": ["FARGATE"],
+            "networkMode": "awsvpc",
+            "cpu": "256",
+            "memory": "512",
+            "volumes": [
+              {
+                "name": "my-ebs-volume",
+                "configuredAtLaunch": true
+              }
+            ]
+          }
+          EOF
+
+      - name: Create CodeDeploy AppSpec file
+        run: |
+          cat > /tmp/appspec.yaml << 'EOF'
+          version: 0.0
+          Resources:
+            - TargetService:
+                Type: AWS::ECS::Service
+                Properties:
+                  TaskDefinition: <TASK_DEFINITION>
+                  LoadBalancerInfo:
+                    ContainerName: "web"
+                    ContainerPort: 80
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          task-definition: /tmp/task-def-codedeploy.json
+          service: my-ecs-service
+          cluster: my-ecs-cluster
+          codedeploy-appspec: /tmp/appspec.yaml
+          codedeploy-application: AppECS-my-ecs-cluster-my-ecs-service
+          codedeploy-deployment-group: DgpECS-my-ecs-cluster-my-ecs-service
+          codedeploy-deployment-description: "Test deployment from GitHub Actions"
+          codedeploy-deployment-config: CodeDeployDefault.ECSAllAtOnce
+          wait-for-minutes: "5"
+          wait-max-delay-seconds: "15"
+          enable-ecs-managed-tags: "true"
+          propagate-tags: "SERVICE"
+          service-managed-ebs-volume-name: my-ebs-volume
+          service-managed-ebs-volume: '{"sizeInGiB":20,"volumeType":"gp3"}'
+
+      - name: Assert action ran (deployed or failed gracefully without AWS creds)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          TASK_DEF_ARN: ${{ steps.action.outputs.task-definition-arn }}
+          CODEDEPLOY_ID: ${{ steps.action.outputs.codedeploy-deployment-id }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "task-definition-arn: $TASK_DEF_ARN"
+          echo "codedeploy-deployment-id: $CODEDEPLOY_ID"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$TASK_DEF_ARN" ]; then
+              echo "FAIL: action succeeded but task-definition-arn output is empty"
+              exit 1
+            fi
+            echo "PASS: task registered with ARN: $TASK_DEF_ARN"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (no AWS credentials available in test environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

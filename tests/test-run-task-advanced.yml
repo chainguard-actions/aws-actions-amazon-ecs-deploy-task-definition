@@ -1,4 +1,4 @@
-name: Test run standalone ECS task
+name: Test advanced run-task inputs
 on:
   workflow_dispatch:
 jobs:
@@ -7,14 +7,14 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create ECS task definition file for run-task
+      - name: Create ECS task definition file for advanced run-task
         run: |
-          cat > /tmp/task-def-run.json << 'EOF'
+          cat > /tmp/task-def-advanced.json << 'EOF'
           {
-            "family": "test-run-task",
+            "family": "test-advanced-run-task",
             "containerDefinitions": [
               {
-                "name": "runner",
+                "name": "worker",
                 "image": "alpine:latest",
                 "cpu": 256,
                 "memory": 512,
@@ -25,7 +25,13 @@ jobs:
             "requiresCompatibilities": ["FARGATE"],
             "networkMode": "awsvpc",
             "cpu": "256",
-            "memory": "512"
+            "memory": "512",
+            "volumes": [
+              {
+                "name": "my-task-ebs-volume",
+                "configuredAtLaunch": true
+              }
+            ]
           }
           EOF
 
@@ -33,10 +39,18 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          task-definition: /tmp/task-def-run.json
+          task-definition: /tmp/task-def-advanced.json
           run-task: "true"
           run-task-launch-type: "FARGATE"
-          run-task-started-by: "GitHub-Actions-Test"
+          run-task-started-by: "GitHub-Actions-Advanced-Test"
+          run-task-container-overrides: '[{"name":"worker","command":["echo","overridden"]}]'
+          run-task-security-groups: "sg-00000000000000001,sg-00000000000000002"
+          run-task-subnets: "subnet-00000000000000001,subnet-00000000000000002"
+          run-task-assign-public-IP: "DISABLED"
+          run-task-capacity-provider-strategy: '[{"capacityProvider":"FARGATE_SPOT","weight":1}]'
+          run-task-tags: '[{"key":"Environment","value":"test"},{"key":"Owner","value":"github-actions"}]'
+          run-task-managed-ebs-volume-name: my-task-ebs-volume
+          run-task-managed-ebs-volume: '{"sizeInGiB":10,"volumeType":"gp3"}'
           wait-for-task-stopped: "false"
 
       - name: Assert action ran (task started or failed gracefully without AWS creds)

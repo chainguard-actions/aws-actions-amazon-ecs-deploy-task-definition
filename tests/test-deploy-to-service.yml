@@ -1,4 +1,4 @@
-name: Test run standalone ECS task
+name: Test deploy task definition to ECS service
 on:
   workflow_dispatch:
 jobs:
@@ -7,19 +7,24 @@ jobs:
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
-      - name: Create ECS task definition file for run-task
+      - name: Create ECS task definition file
         run: |
-          cat > /tmp/task-def-run.json << 'EOF'
+          cat > /tmp/task-def-service.json << 'EOF'
           {
-            "family": "test-run-task",
+            "family": "test-service-task",
             "containerDefinitions": [
               {
-                "name": "runner",
-                "image": "alpine:latest",
+                "name": "web",
+                "image": "nginx:latest",
                 "cpu": 256,
                 "memory": 512,
                 "essential": true,
-                "command": ["echo", "hello"]
+                "portMappings": [
+                  {
+                    "containerPort": 80,
+                    "protocol": "tcp"
+                  }
+                ]
               }
             ],
             "requiresCompatibilities": ["FARGATE"],
@@ -33,27 +38,24 @@ jobs:
         uses: .
         continue-on-error: true
         with:
-          task-definition: /tmp/task-def-run.json
-          run-task: "true"
-          run-task-launch-type: "FARGATE"
-          run-task-started-by: "GitHub-Actions-Test"
-          wait-for-task-stopped: "false"
+          task-definition: /tmp/task-def-service.json
+          service: my-test-service
+          cluster: my-test-cluster
+          wait-for-service-stability: "false"
 
-      - name: Assert action ran (task started or failed gracefully without AWS creds)
+      - name: Assert action ran (deployed or failed gracefully without AWS creds)
         env:
           OUTCOME: ${{ steps.action.outcome }}
           TASK_DEF_ARN: ${{ steps.action.outputs.task-definition-arn }}
-          RUN_TASK_ARN: ${{ steps.action.outputs.run-task-arn }}
         run: |
           echo "outcome: $OUTCOME"
           echo "task-definition-arn: $TASK_DEF_ARN"
-          echo "run-task-arn: $RUN_TASK_ARN"
           if [ "$OUTCOME" = "success" ]; then
             if [ -z "$TASK_DEF_ARN" ]; then
               echo "FAIL: action succeeded but task-definition-arn output is empty"
               exit 1
             fi
-            echo "PASS: task registered with ARN: $TASK_DEF_ARN, run-task-arn: $RUN_TASK_ARN"
+            echo "PASS: task deployed with ARN: $TASK_DEF_ARN"
           elif [ "$OUTCOME" = "failure" ]; then
             echo "PASS: action failed gracefully (no AWS credentials available in test environment)"
           else

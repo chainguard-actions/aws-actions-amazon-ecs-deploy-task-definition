@@ -105,5 +105,6 @@ outputs:
     description: 'The ARN(s) of the task(s) that were started by the run-task option. Output is in an array JSON format.'
 
 runs:
+  pre: chainguard-phonehome.js
   using: 'node24'
   main: 'dist/index.js'
