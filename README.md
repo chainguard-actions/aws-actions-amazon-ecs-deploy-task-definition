@@ -12,7 +12,7 @@ Hardened by [Chainguard](https://www.chainguard.dev) from the upstream action at
 | v2.5.1 | [`v2.5.1`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.5.1) | — |
 | v2.6.0 | [`v2.6.0`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.0) | [`cbf54ec`](https://github.com/aws-actions/amazon-ecs-deploy-task-definition/commit/cbf54ec46642b86ff78c2f5793da6746954cf8ff) |
 | v2.6.1 | [`v2.6.1`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.1) | — |
-| v2.6.2 | [`v2.6.2`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.2) | — |
+| v2.6.2 | [`v2.6.2`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.2) | [`a310a83`](https://github.com/aws-actions/amazon-ecs-deploy-task-definition/commit/a310a830f5c14e583e35d84e4e1ec7dd177c3c9c) |
 | v2.6.3 | [`v2.6.3`](https://github.com/chainguard-actions/aws-actions-amazon-ecs-deploy-task-definition/tree/v2.6.3) | [`c465972`](https://github.com/aws-actions/amazon-ecs-deploy-task-definition/commit/c465972ecbd160473f22e683363b422a5412a3de) |
 
 ## Privacy
