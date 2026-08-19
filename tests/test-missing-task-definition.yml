@@ -1,0 +1,30 @@
+name: Test missing task definition file
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          task-definition: nonexistent-task-definition.json
+          # No service specified
+
+      - name: Assert action failed due to missing file
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+        run: |
+          echo "outcome: $OUTCOME"
+          if [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action correctly failed when task definition file does not exist"
+          elif [ "$OUTCOME" = "success" ]; then
+            echo "FAIL: action should have failed when task definition file is missing"
+            exit 1
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi

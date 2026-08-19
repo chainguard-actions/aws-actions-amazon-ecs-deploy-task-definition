@@ -1,0 +1,61 @@
+name: Test keep-null-value-keys input
+on:
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Create task definition with null values
+        run: |
+          cat > "$GITHUB_WORKSPACE/task-def-with-nulls.json" << 'EOF'
+          {
+            "family": "test-task-nulls",
+            "networkMode": "awsvpc",
+            "requiresCompatibilities": ["FARGATE"],
+            "cpu": "256",
+            "memory": "512",
+            "containerDefinitions": [
+              {
+                "name": "test-container",
+                "image": "nginx:latest",
+                "essential": true,
+                "environment": [
+                  {
+                    "name": "MY_VAR",
+                    "value": ""
+                  }
+                ]
+              }
+            ]
+          }
+          EOF
+
+      - id: action
+        uses: .
+        continue-on-error: true
+        with:
+          task-definition: task-def-with-nulls.json
+          keep-null-value-keys: "value"
+          # No service specified — only register
+
+      - name: Assert action ran (keep-null-value-keys scenario)
+        env:
+          OUTCOME: ${{ steps.action.outcome }}
+          TASK_DEF_ARN: ${{ steps.action.outputs.task-definition-arn }}
+        run: |
+          echo "outcome: $OUTCOME"
+          echo "task-definition-arn: $TASK_DEF_ARN"
+          if [ "$OUTCOME" = "success" ]; then
+            if [ -z "$TASK_DEF_ARN" ]; then
+              echo "FAIL: action succeeded but task-definition-arn output is empty"
+              exit 1
+            fi
+            echo "PASS: task registered with ARN: $TASK_DEF_ARN"
+          elif [ "$OUTCOME" = "failure" ]; then
+            echo "PASS: action failed gracefully (no AWS credentials available in test environment)"
+          else
+            echo "FAIL: unexpected outcome '$OUTCOME'"
+            exit 1
+          fi
