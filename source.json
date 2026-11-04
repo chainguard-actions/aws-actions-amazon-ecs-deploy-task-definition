@@ -4,8 +4,13 @@
   "version": "v2.6.3",
   "commit_sha": "c465972ecbd160473f22e683363b422a5412a3de",
   "url": "https://github.com/aws-actions/amazon-ecs-deploy-task-definition",
-  "policy_sha": "d636be7e43ef829af6e853da6b3c7566db9f72fe",
+  "policy_sha": "374911c4be584df24e6da57af2d990570ef0f859",
   "test_policy_sha": "843adf9e4b8f85d0c08b27b9d0b09dd094b54702",
   "test_agent_version": "2",
-  "harden_agent_version": "2"
+  "harden_agent_version": "2",
+  "dist_artifact": {
+    "gcs_uri": "gs://patch-actions-node-artifacts/dist-artifacts/aws-actions/amazon-ecs-deploy-task-definition/v2.6.3/sha256-30c81762824cc31cfc980a83e7144788cc6feb2f224a87176ffead094a232cce.tar.gz",
+    "sha256": "30c81762824cc31cfc980a83e7144788cc6feb2f224a87176ffead094a232cce",
+    "size_bytes": 634140
+  }
 }
